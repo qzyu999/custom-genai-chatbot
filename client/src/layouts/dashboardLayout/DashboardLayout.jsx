@@ -58,7 +58,7 @@ const DashboardLayout = () => {
             <button
               className="sidebar-expand-btn"
               onClick={() => setSidebarCollapsed(false)}
-              title="Open sidebar"
+              data-tooltip="Open sidebar"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -89,7 +89,7 @@ const DashboardLayout = () => {
           <button
             className={`activity-btn ${activePanel === 'chat' ? 'active' : ''}`}
             onClick={() => switchPanel('chat')}
-            title="Chat"
+            data-tooltip="Chat"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
@@ -98,7 +98,7 @@ const DashboardLayout = () => {
           <button
             className={`activity-btn ${activePanel === 'wiki' ? 'active' : ''}`}
             onClick={() => switchPanel('wiki')}
-            title="Wiki"
+            data-tooltip="Wiki"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/><circle cx="19" cy="19" r="3"/><line x1="21" y1="21" x2="23" y2="23"/>
@@ -107,7 +107,7 @@ const DashboardLayout = () => {
           <button
             className={`activity-btn ${activePanel === 'query' ? 'active' : ''}`}
             onClick={() => switchPanel('query')}
-            title="Query Editor"
+            data-tooltip="Query Editor"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4.03 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/><circle cx="19" cy="19" r="3"/><line x1="21" y1="21" x2="23" y2="23"/>
@@ -119,7 +119,7 @@ const DashboardLayout = () => {
               const totalUsed = contextStats.totalTokens + conversationTokens;
               const pct = Math.min(99, Math.round((totalUsed / contextStats.modelLimit) * 100));
               return (
-                <div className="context-indicator" title={`Context: ${pct}% used\nSystem: ~${contextStats.totalTokens.toLocaleString()} tokens\nConversation: ~${conversationTokens.toLocaleString()} tokens\nModel: ${contextStats.currentModel} (${contextStats.modelLimit.toLocaleString()} limit)`}>
+                <div className="context-indicator" data-tooltip={`Context: ${pct}% used\nSystem: ~${contextStats.totalTokens.toLocaleString()} tokens\nConversation: ~${conversationTokens.toLocaleString()} tokens\nModel: ${contextStats.currentModel}\nLimit: ${contextStats.modelLimit.toLocaleString()} tokens`}>
                   <svg width="28" height="28" viewBox="0 0 36 36">
                     <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3"/>
                     <circle cx="18" cy="18" r="14" fill="none" stroke={pct > 80 ? '#f59e0b' : '#7c3aed'} strokeWidth="3"
@@ -135,7 +135,7 @@ const DashboardLayout = () => {
           <button
             className="activity-btn activity-btn-info"
             onClick={() => setShowAbout(true)}
-            title="How Lighthouse works"
+            data-tooltip="How it works"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
