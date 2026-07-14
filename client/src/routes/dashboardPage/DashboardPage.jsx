@@ -70,7 +70,22 @@ const DashboardPage = () => {
     <div className='dashboardPage'>
       <div className="dashboard-center">
         <div className="dashboard-greeting">
-          <h1>{import.meta.env.VITE_APP_NAME || 'Lighthouse'}</h1>
+          <h1>
+            <svg className="lighthouse-logo" width="40" height="40" viewBox="0 0 32 32" fill="none">
+              <path d="M16 4L16 6" stroke="#7c3aed" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M14 6h4l1.2 4.5h-6.4L14 6z" stroke="#7c3aed" strokeWidth="1.2" fill="none"/>
+              <rect x="13" y="10.5" width="6" height="2" rx="0.5" stroke="#7c3aed" strokeWidth="1.2" fill="none"/>
+              <path d="M13.5 12.5l-1.5 12h8l-1.5-12" stroke="#7c3aed" strokeWidth="1.2" fill="none"/>
+              <path d="M11 24.5h10" stroke="#7c3aed" strokeWidth="1.5" strokeLinecap="round"/>
+              <path d="M9 7.5l2.5 1" stroke="#7c3aed" strokeWidth="1" strokeLinecap="round" opacity="0.7"/>
+              <path d="M23 7.5l-2.5 1" stroke="#7c3aed" strokeWidth="1" strokeLinecap="round" opacity="0.7"/>
+              <path d="M6 14l1 2.5L6 19l-1-2.5z" fill="#7c3aed" opacity="0.8"/>
+              <path d="M6 14l2.5 1L6 19l-2.5-1z" fill="#7c3aed" opacity="0.4"/>
+              <path d="M26 12l0.7 1.8L26 15.5l-0.7-1.8z" fill="#7c3aed" opacity="0.8"/>
+              <path d="M26 12l1.8 0.7L26 15.5l-1.8-0.7z" fill="#7c3aed" opacity="0.4"/>
+            </svg>
+            {import.meta.env.VITE_APP_NAME || 'Lighthouse'}
+          </h1>
           <p>What can I help you explore today?</p>
         </div>
 

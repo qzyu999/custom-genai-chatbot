@@ -169,3 +169,10 @@
     text-align: center;
   }
 }
+
+.hero h1 {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+}
