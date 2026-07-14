@@ -10,6 +10,7 @@ const DashboardLayout = () => {
   const [activePanel, setActivePanel] = useState('chat');
   const [showAbout, setShowAbout] = useState(false);
   const [contextStats, setContextStats] = useState(null);
+  const [conversationTokens, setConversationTokens] = useState(0);
 
   useEffect(() => {
     const API_URL = import.meta.env.VITE_API_URL || "";
@@ -71,7 +72,7 @@ const DashboardLayout = () => {
         <div className='content'>
             {/* Chat view — always mounted, hidden when not active */}
             <div className="panel-view" style={{ display: activePanel === 'chat' ? 'flex' : 'none' }}>
-              <Outlet context={{ setActivePanel: switchPanel, openQueryInEditor, openWikiPage }} />
+              <Outlet context={{ setActivePanel: switchPanel, openQueryInEditor, openWikiPage, setConversationTokens }} />
             </div>
             {/* Wiki view — always mounted to preserve iframe state */}
             <div className="panel-view" style={{ display: activePanel === 'wiki' ? 'flex' : 'none' }}>
@@ -114,16 +115,22 @@ const DashboardLayout = () => {
           </button>
           <div className="activity-bar-spacer"></div>
           {contextStats && (
-            <div className="context-indicator" title={`Context: ${contextStats.usagePercent}% of ${contextStats.currentModel} (${contextStats.totalTokens.toLocaleString()} / ${contextStats.modelLimit.toLocaleString()} tokens)`}>
-              <svg width="28" height="28" viewBox="0 0 36 36">
-                <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3"/>
-                <circle cx="18" cy="18" r="14" fill="none" stroke="#7c3aed" strokeWidth="3"
-                  strokeDasharray={`${contextStats.usagePercent * 0.88} 88`}
-                  strokeLinecap="round"
-                  transform="rotate(-90 18 18)"/>
-              </svg>
-              <span className="context-percent">{contextStats.usagePercent}%</span>
-            </div>
+            (() => {
+              const totalUsed = contextStats.totalTokens + conversationTokens;
+              const pct = Math.min(99, Math.round((totalUsed / contextStats.modelLimit) * 100));
+              return (
+                <div className="context-indicator" title={`Context: ${pct}% used\nSystem: ~${contextStats.totalTokens.toLocaleString()} tokens\nConversation: ~${conversationTokens.toLocaleString()} tokens\nModel: ${contextStats.currentModel} (${contextStats.modelLimit.toLocaleString()} limit)`}>
+                  <svg width="28" height="28" viewBox="0 0 36 36">
+                    <circle cx="18" cy="18" r="14" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="3"/>
+                    <circle cx="18" cy="18" r="14" fill="none" stroke={pct > 80 ? '#f59e0b' : '#7c3aed'} strokeWidth="3"
+                      strokeDasharray={`${pct * 0.88} 88`}
+                      strokeLinecap="round"
+                      transform="rotate(-90 18 18)"/>
+                  </svg>
+                  <span className="context-percent">{pct}%</span>
+                </div>
+              );
+            })()
           )}
           <button
             className="activity-btn activity-btn-info"

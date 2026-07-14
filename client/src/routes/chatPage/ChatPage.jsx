@@ -140,7 +140,7 @@ function InlineQueryRunner({ sql, chatId }) {
 }
 
 const ChatPage = () => {
-  const { openQueryInEditor, openWikiPage } = useOutletContext() || {};
+  const { openQueryInEditor, openWikiPage, setConversationTokens } = useOutletContext() || {};
   const chatId = useLocation().pathname.split('/').pop();
   const [copied, setCopied] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
@@ -203,6 +203,12 @@ const ChatPage = () => {
     restoreScrollPosition();
     // Extract wiki references from chat history
     if (data?.history) {
+      // Estimate conversation tokens (chars / 4)
+      const totalChars = data.history.reduce((sum, msg) => {
+        return sum + (msg.parts?.[0]?.text?.length || 0);
+      }, 0);
+      if (setConversationTokens) setConversationTokens(Math.round(totalChars / 4));
+
       const refs = new Map();
       for (const msg of data.history) {
         if (msg.role !== 'user' && msg.parts?.[0]?.text) {
