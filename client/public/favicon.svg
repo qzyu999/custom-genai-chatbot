@@ -55,11 +55,11 @@
 
   <!-- Alternating lighthouse bands -->
   <path d="M13.65 13.6H18.35L18.2 15.3H13.8L13.65 13.6Z"
-        fill="#7C3AED" opacity="0.18"/>
+        fill="#7C3AED" opacity="0.40"/>
   <path d="M13.28 17.2H18.72L18.56 19.0H13.44L13.28 17.2Z"
-        fill="#7C3AED" opacity="0.18"/>
+        fill="#7C3AED" opacity="0.40"/>
   <path d="M12.98 20.9H19.02L18.84 22.8H13.16L12.98 20.9Z"
-        fill="#7C3AED" opacity="0.18"/>
+        fill="#7C3AED" opacity="0.40"/>
 
   <!-- Door -->
   <path d="M15.35 20.2C15.35 19.8 15.67 19.48 16.07 19.48C16.47 19.48 16.79 19.8 16.79 20.2V24H15.35V20.2Z"
