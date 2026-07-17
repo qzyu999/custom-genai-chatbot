@@ -27,6 +27,7 @@
     "react-router-dom": "^6.26.1",
     "react-syntax-highlighter": "^15.5.0",
     "react-type-animation": "^3.2.0",
+    "remark-gfm": "^4.0.1",
     "remark-rehype": "^11.1.0"
   },
   "devDependencies": {

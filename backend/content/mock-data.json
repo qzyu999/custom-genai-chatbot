@@ -1,0 +1,98 @@
+{
+  "query_results": {
+    "access_log": {
+      "columns": ["month", "total_events", "authorized", "unauthorized", "pending"],
+      "rows": [
+        ["2026-01", 4521, 4102, 312, 107],
+        ["2026-02", 4893, 4455, 298, 140],
+        ["2026-03", 5102, 4680, 287, 135],
+        ["2026-04", 5340, 4890, 310, 140],
+        ["2026-05", 5589, 5120, 295, 174],
+        ["2026-06", 5812, 5310, 342, 160]
+      ]
+    },
+    "license": {
+      "columns": ["classification_type", "total_licenses", "active", "expired", "pending_review"],
+      "rows": [
+        ["Type_A", 145, 120, 18, 7],
+        ["Type_B", 89, 72, 12, 5],
+        ["Type_C", 234, 210, 15, 9],
+        ["Type_D", 412, 398, 8, 6]
+      ]
+    },
+    "decision_log": {
+      "columns": ["decision_date", "decision_type", "outcome", "reviewer", "processing_time_hrs"],
+      "rows": [
+        ["2026-06-01", "license_renewal", "approved", "analyst_1", 2.3],
+        ["2026-06-02", "access_request", "denied", "analyst_2", 1.1],
+        ["2026-06-03", "classification_change", "approved", "analyst_1", 4.5],
+        ["2026-06-04", "access_request", "approved", "analyst_3", 0.8],
+        ["2026-06-05", "license_renewal", "pending", "analyst_2", null],
+        ["2026-06-06", "access_request", "approved", "analyst_1", 1.5],
+        ["2026-06-07", "exception_request", "denied", "analyst_4", 6.2],
+        ["2026-06-08", "access_request", "approved", "analyst_3", 0.9]
+      ]
+    },
+    "correlation": {
+      "columns": ["month", "unauthorized_count", "expired_count", "correlation_score"],
+      "rows": [
+        ["2026-01", 312, 42, 0.73],
+        ["2026-02", 298, 38, 0.71],
+        ["2026-03", 287, 35, 0.68],
+        ["2026-04", 310, 41, 0.74],
+        ["2026-05", 295, 37, 0.69],
+        ["2026-06", 342, 48, 0.82]
+      ]
+    },
+    "user_activity": {
+      "columns": ["user_group", "active_users", "avg_queries_per_day", "data_accessed_gb"],
+      "rows": [
+        ["engineering", 234, 12.4, 45.2],
+        ["analytics", 89, 28.7, 112.8],
+        ["management", 45, 3.2, 8.1],
+        ["external", 12, 1.8, 2.3]
+      ]
+    }
+  },
+  "plans": {
+    "default": {
+      "reasoning": "Breaking this into data retrieval, analysis, and context gathering steps.",
+      "subtasks": [
+        { "agent": "researcher", "description": "Look up relevant business rules and documentation", "inputs": {} },
+        { "agent": "sql_analyst", "description": "Query the relevant data tables", "inputs": {} },
+        { "agent": "data_analyst", "description": "Analyze the query results for patterns and insights", "inputs": {} }
+      ]
+    },
+    "trend_analysis": {
+      "reasoning": "Time-series analysis requires historical data pull followed by statistical analysis.",
+      "subtasks": [
+        { "agent": "sql_analyst", "description": "Pull monthly aggregated data for the specified time range", "inputs": { "sql_hint": "GROUP BY month" } },
+        { "agent": "data_analyst", "description": "Detect trends and compute month-over-month changes", "inputs": { "focus_area": "trend_detection" } },
+        { "agent": "researcher", "description": "Check if any business rule changes explain the trends", "inputs": {} }
+      ]
+    },
+    "correlation": {
+      "reasoning": "Correlation analysis requires two datasets then statistical comparison.",
+      "subtasks": [
+        { "agent": "sql_analyst", "description": "Pull the first dataset (metric A)", "inputs": {} },
+        { "agent": "sql_analyst", "description": "Pull the second dataset (metric B)", "inputs": {} },
+        { "agent": "data_analyst", "description": "Compute correlation between the two metrics", "inputs": { "focus_area": "correlation" } }
+      ]
+    }
+  },
+  "synthesis": {
+    "summary": "## Investigation Summary\n\n### Key Findings\n\n📈 **Trend**: Unauthorized access events are increasing at ~5% month-over-month, with a notable spike in June 2026 (+16% vs May).\n\n🔗 **Correlation**: Strong positive correlation (r=0.82) between expired licenses and unauthorized access attempts. June spike coincides with a batch of license expirations.\n\n⚠️ **Anomaly**: Processing time for exception requests (6.2 hrs avg) is 3x higher than standard access requests (1.1 hrs avg), suggesting a bottleneck in the review pipeline.\n\n### Data Summary\n\n| Month | Unauthorized | Expired | Correlation |\n|-------|-------------|---------|-------------|\n| Jan   | 312         | 42      | 0.73        |\n| Feb   | 298         | 38      | 0.71        |\n| Mar   | 287         | 35      | 0.68        |\n| Apr   | 310         | 41      | 0.74        |\n| May   | 295         | 37      | 0.69        |\n| Jun   | 342         | 48      | 0.82        |\n\n### Recommendations\n\n1. **Proactive renewal** — Flag items expiring within 30 days for automatic renewal notification\n2. **Access review automation** — Implement auto-revocation for expired items (reduces unauthorized access)\n3. **Exception pipeline** — Add SLA tracking for exception requests; current 6.2hr avg exceeds 4hr target",
+    "artifacts": [
+      {
+        "type": "sql",
+        "title": "Monthly Access & License Query",
+        "content": "SELECT\n  date_trunc('month', event_date) AS month,\n  COUNT(*) FILTER (WHERE status = 'unauthorized') AS unauthorized_count,\n  COUNT(DISTINCT l.record_id) FILTER (WHERE l.expiry_date < event_date) AS expired_count\nFROM audit_events a\nLEFT JOIN license_records l ON a.user_id = l.user_id\nWHERE event_date >= dateadd(month, -6, current_date)\nGROUP BY 1\nORDER BY 1;"
+      },
+      {
+        "type": "insight",
+        "title": "Risk Assessment",
+        "content": "**HIGH RISK**: The June correlation spike (0.82) exceeds the alert threshold (0.75). Recommend immediate review of expirations scheduled for July."
+      }
+    ]
+  }
+}

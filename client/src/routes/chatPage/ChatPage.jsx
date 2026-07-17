@@ -2,9 +2,11 @@ import './chatPage.css';
 import NewPrompt from '../../components/newPrompt/NewPrompt';
 import FooterWithDisclaimer from '../../components/footerWithDisclaimer/FooterWithDisclaimer';
 import MessageMenu from '../../components/messageMenu/MessageMenu';
-import { useQuery } from '@tanstack/react-query';
+import InvestigationProgress from '../../components/investigationProgress/InvestigationProgress';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, useOutletContext } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import React, { useState, useRef, useEffect } from 'react';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { atomDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -142,6 +144,7 @@ function InlineQueryRunner({ sql, chatId }) {
 const ChatPage = () => {
   const { openQueryInEditor, openWikiPage, setConversationTokens } = useOutletContext() || {};
   const chatId = useLocation().pathname.split('/').pop();
+  const queryClient = useQueryClient();
   const [copied, setCopied] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [userScrolled, setUserScrolled] = useState(false);
@@ -155,6 +158,10 @@ const ChatPage = () => {
   // variants = array of alternative responses for the last assistant message
   const [variants, setVariants] = useState([]);
   const [variantIndex, setVariantIndex] = useState(0);
+  const [activeInvestigation, setActiveInvestigation] = useState(null);
+  const [completedInvestigations, setCompletedInvestigations] = useState([]);
+  const [investigationAnswer, setInvestigationAnswer] = useState(''); // Streaming LLM summary
+  const [investigationPhase, setInvestigationPhase] = useState(null); // null | 'investigating' | 'summarizing'
 
   const { isPending, error, data } = useQuery({
     queryKey: ['chat', chatId],
@@ -164,6 +171,24 @@ const ChatPage = () => {
       }).then((res) => res.json()),
     placeholderData: (prev) => prev, // Keep previous data during refetch to prevent unmount
   });
+
+  // Load persisted investigations from DB on chat load
+  useEffect(() => {
+    if (!chatId) return;
+    const API_URL = import.meta.env.VITE_API_URL || "";
+    fetch(`${API_URL}/api/chats/${chatId}/investigations`, { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => {
+        if (data.investigations?.length) {
+          setCompletedInvestigations(data.investigations.map(inv => ({
+            task: inv.task,
+            result: inv.result,
+            steps: inv.steps,
+          })));
+        }
+      })
+      .catch(() => {});
+  }, [chatId]);
 
   // Reset variants when chat data changes (new chat loaded or after mutation)
   useEffect(() => {
@@ -380,6 +405,134 @@ const ChatPage = () => {
     }
   };
 
+  const handleInvestigate = async (task) => {
+    // Save the user's investigation message to chat history with 🔬 prefix
+    // (Skip if this is the first message — already saved by dashboard chat creation)
+    const history = data?.history || [];
+    const alreadyInHistory = history.some(m => m.role === 'user' && (m.parts[0]?.text === task || m.parts[0]?.text === `🔬 ${task}`));
+
+    if (!alreadyInHistory && chatId) {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || "";
+        await fetch(`${API_URL}/api/chats/${chatId}`, {
+          method: 'PUT',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: `🔬 ${task}` }),
+        });
+        await queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+      } catch {}
+    } else if (alreadyInHistory && chatId) {
+      // If the message exists without prefix (from dashboard), update it
+      // Actually just mark via activeInvestigation — the prefix is for new submissions
+    }
+
+    setActiveInvestigation(task);
+    setInvestigationPhase('investigating');
+  };
+
+  const handleInvestigationComplete = async (result) => {
+    const completedTask = activeInvestigation;
+
+    // Move to completed list — panel stays visible via completedInvestigations
+    setCompletedInvestigations(prev => [...prev, { task: completedTask, result }]);
+
+    // Persist investigation to DB
+    if (chatId) {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || "";
+        await fetch(`${API_URL}/api/chats/${chatId}/investigations`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ task: completedTask, result, status: 'complete' }),
+        });
+      } catch {}
+    }
+
+    // Transition to summarizing phase
+    setInvestigationPhase('summarizing');
+
+    // Now trigger an LLM generation that summarizes the investigation
+    if (result?.summary && chatId) {
+      const API_URL = import.meta.env.VITE_API_URL || "";
+
+      const investigationContext = `The user asked: "${completedTask}"\n\nAn automated investigation was run and produced the following findings:\n\n${result.summary}\n\nPlease provide a concise, conversational summary of these findings. Highlight the most important insights, any risks or anomalies found, and actionable recommendations. Reference specific data points from the investigation.`;
+
+      setIsTyping(true);
+      setUserScrolled(false);
+      setInvestigationAnswer('');
+
+      try {
+        const chatHistory = (data?.history || []).map(({ role, parts }) => ({
+          role: role === 'model' ? 'assistant' : role,
+          content: parts[0].text,
+        }));
+        chatHistory.push({ role: 'user', content: investigationContext });
+
+        const res = await fetch(`${API_URL}/api/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ messages: chatHistory, model: data?.model }),
+        });
+
+        if (!res.ok) throw new Error('LLM summary failed');
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let accumulated = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split('\n\n');
+          buffer = events.pop();
+
+          for (const event of events) {
+            for (const line of event.split('\n')) {
+              if (line.startsWith('data: ')) {
+                const payload = line.slice(6);
+                if (payload === '[DONE]') break;
+                try {
+                  const parsed = JSON.parse(payload);
+                  const content = parsed.choices?.[0]?.delta?.content || '';
+                  if (content) {
+                    accumulated += content;
+                    setInvestigationAnswer(accumulated);
+                  }
+                } catch {}
+              }
+            }
+          }
+        }
+
+        // Save only the LLM summary as the model response
+        if (accumulated) {
+          await fetch(`${API_URL}/api/chats/${chatId}`, {
+            method: 'PUT',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ answer: accumulated }),
+          });
+        }
+      } catch (err) {
+        console.error('Investigation summary generation failed:', err);
+      } finally {
+        setIsTyping(false);
+        setInvestigationAnswer('');
+        setInvestigationPhase(null);
+        setActiveInvestigation(null);
+        queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+      }
+    } else {
+      setActiveInvestigation(null);
+      setInvestigationPhase(null);
+    }
+  };
+
   const messages = data?.history || [];
   const latestMessageIndex = messages.length - 1;
 
@@ -488,20 +641,57 @@ const ChatPage = () => {
     <div className="chatPage" ref={chatPageRef}>
       <div className="wrapper">
         <div className="chat">
-          {isPending ? 'Loading...' : error ? 'Something went wrong!' : data?.history?.map((message, i) => (
+          {isPending ? 'Loading...' : error ? 'Something went wrong!' : data?.history?.filter(m => m.parts?.[0]?.text).map((message, i) => (
             <React.Fragment key={i}>
               {message.role === 'user' ? (
+                <>
                 <div className="message-row user-row">
-                  <button className="user-copy-btn" onClick={() => handleCopy(message.parts[0].text)} title="Copy message">
+                  <button className="user-copy-btn" onClick={() => handleCopy(message.parts[0].text.replace(/^🔬\s*/, ''))} title="Copy message">
                     <FontAwesomeIcon icon={faCopy} />
                   </button>
-                  <div className="message user">
-                    <div className="user-message">{message.parts[0].text}</div>
+                  <div className={`message user ${message.parts[0].text.startsWith('🔬') ? 'investigation-msg' : ''}`}>
+                    {message.parts[0].text.startsWith('🔬') && (
+                      <span className="user-investigate-badge">🔬</span>
+                    )}
+                    <div className="user-message">{message.parts[0].text.replace(/^🔬\s*/, '')}</div>
                   </div>
                 </div>
+                {/* Render completed investigation panel inline after its triggering user message */}
+                {(() => {
+                  const msgText = message.parts[0].text.replace(/^🔬\s*/, '');
+                  // Don't render here if the active panel is already showing this investigation
+                  if (activeInvestigation === msgText) return null;
+                  const inv = completedInvestigations.find(c => c.task === msgText);
+                  if (inv) {
+                    return (
+                      <InvestigationProgress
+                        key={`inv-${inv.task}`}
+                        task={inv.task}
+                        onComplete={() => {}}
+                        onCancel={() => {}}
+                        preloadedResult={inv.result}
+                      />
+                    );
+                  }
+                  // If the message is marked as investigation but no panel in memory,
+                  // show a minimal collapsed indicator (persists across page loads)
+                  if (message.parts[0].text.startsWith('🔬')) {
+                    return (
+                      <div className="investigation-container complete" style={{padding: '0'}}>
+                        <div className="investigation-header" style={{cursor: 'default'}}>
+                          <span className="investigation-icon">🔬</span>
+                          <span className="investigation-title">Investigation</span>
+                          <span className="investigation-badge complete">Complete</span>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+                </>
               ) : (
                 <div className="message bot">
-                  <ReactMarkdown components={components}>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
                     {getMessageText(message, i)}
                   </ReactMarkdown>
                   {i === latestMessageIndex && variants.length > 1 && (
@@ -550,6 +740,30 @@ const ChatPage = () => {
               )}
             </React.Fragment>
           ))}
+          {activeInvestigation && (
+            <InvestigationProgress
+              task={activeInvestigation}
+              onComplete={handleInvestigationComplete}
+              onCancel={() => { setActiveInvestigation(null); setInvestigationPhase(null); }}
+            />
+          )}
+          {investigationPhase === 'summarizing' && !investigationAnswer && (
+            <div className="investigation-status-banner">
+              <span className="investigation-status-spinner" />
+              <span>Preparing summary...</span>
+            </div>
+          )}
+          {investigationAnswer && (
+            <div className="message bot">
+              <div className="investigation-status-banner summarizing">
+                <span className="investigation-status-spinner" />
+                <span>Summarizing findings...</span>
+              </div>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+                {investigationAnswer}
+              </ReactMarkdown>
+            </div>
+          )}
           <div className="newPromptContainer" ref={bottomRef}>
             {data && <NewPrompt
               key={chatId}
@@ -562,6 +776,7 @@ const ChatPage = () => {
               chatPageRef={chatPageRef}
               chatId={chatId}
               onExternalStop={handleStopRegeneration}
+              onInvestigate={handleInvestigate}
             />}
             <FooterWithDisclaimer />
           </div>

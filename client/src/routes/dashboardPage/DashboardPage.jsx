@@ -15,6 +15,7 @@ const DashboardPage = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [chatMode, setChatMode] = useState('chat'); // 'chat' | 'investigate'
 
   useEffect(() => {
     fetch(`${API_URL}/api/suggestions`, { credentials: 'include' })
@@ -29,7 +30,7 @@ const DashboardPage = () => {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, model: currentModel }),
+        body: JSON.stringify({ text: chatMode === 'investigate' ? `🔬 ${text}` : text, model: currentModel }),
       }).then(async (res) => {
         if (!res.ok) {
           const errorResponse = await res.json();
@@ -40,7 +41,9 @@ const DashboardPage = () => {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['userChats'] });
-      navigate(`/dashboard/chats/${data.id}`, { state: { autoGenerate: true } });
+      navigate(`/dashboard/chats/${data.id}`, {
+        state: { autoGenerate: chatMode === 'chat', autoInvestigate: chatMode === 'investigate' },
+      });
     },
     onError: (error) => {
       console.error('Mutation error:', error.message);
@@ -105,9 +108,34 @@ const DashboardPage = () => {
 
         <div className="dashboard-input-wrapper">
           <form onSubmit={handleSubmit} ref={formRef} className="dashboard-form">
+            <div className="dashboard-mode-toggle">
+              <button
+                type="button"
+                className={`mode-btn ${chatMode === 'chat' ? 'active' : ''}`}
+                onClick={() => setChatMode('chat')}
+                title=""
+                data-tooltip="Chat — quick Q&A"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                className={`mode-btn ${chatMode === 'investigate' ? 'active' : ''}`}
+                onClick={() => setChatMode('investigate')}
+                title=""
+                data-tooltip="Investigate — multi-step analysis with sub-agents"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  <path d="M8 11h6"/><path d="M11 8v6"/>
+                </svg>
+              </button>
+            </div>
             <textarea
               name='text'
-              placeholder='Ask about your data, write a query, or search the wiki...'
+              placeholder={chatMode === 'investigate' ? 'Describe what you\'d like to investigate...' : 'Ask about your data, write a query, or search the wiki...'}
               onKeyDown={handleKeyDown}
               rows={1}
               value={inputValue}
@@ -115,10 +143,16 @@ const DashboardPage = () => {
               onFocus={() => setShowSuggestions(true)}
               onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
             />
-            <button type="submit">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M8 1L8 15M8 1L3 6M8 1L13 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-              </svg>
+            <button type="submit" className={chatMode === 'investigate' ? 'investigate-submit' : ''}>
+              {chatMode === 'investigate' ? (
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+              ) : (
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                  <path d="M8 1L8 15M8 1L3 6M8 1L13 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                </svg>
+              )}
             </button>
           </form>
           {showSuggestions && suggestions.length > 0 && !inputValue && (

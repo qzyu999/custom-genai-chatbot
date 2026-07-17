@@ -36,6 +36,37 @@ const chatSchema = new mongoose.Schema(
       required: true,
       default: false,
     },
+    investigations: [
+      {
+        task: { type: String, required: true },
+        status: { type: String, enum: ['running', 'complete', 'failed'], default: 'running' },
+        steps: [
+          {
+            type: { type: String },
+            step: Number,
+            total: Number,
+            detail: String,
+            artifact: {
+              type: { type: String },
+              title: String,
+              content: String,
+            },
+          }
+        ],
+        result: {
+          summary: String,
+          artifacts: [
+            {
+              type: { type: String },
+              title: String,
+              content: String,
+            }
+          ],
+          duration: Number,
+        },
+        createdAt: { type: Date, default: Date.now },
+      }
+    ],
   },
   { timestamps: true }
 );

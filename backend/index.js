@@ -9,6 +9,7 @@ import Chat from "./models/chat.js";
 import UserChats from "./models/userChats.js";
 import { loadPlugins } from "./plugins/index.js";
 import { ContextCompiler } from "./context/compiler.js";
+import { registerAgentRoutes } from "./agent/routes.js";
 
 // Allow self-signed certs for enterprise endpoints
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
@@ -134,8 +135,9 @@ app.put("/api/chats/:id", async (req, res) => {
     const { question, answer, img } = req.body;
     const newItems = [
         ...(question ? [{ role: "user", parts: [{ text: question }], ...(img && { img }) }] : []),
-        { role: "model", parts: [{ text: answer }] },
+        ...(answer ? [{ role: "model", parts: [{ text: answer }] }] : []),
     ];
+    if (newItems.length === 0) return res.status(400).json({ error: 'Nothing to save' });
     try {
         if (mongoConnected) {
             await Chat.updateOne({ _id: req.params.id }, { $push: { history: { $each: newItems } } });
@@ -162,6 +164,44 @@ app.delete('/api/chats/:id', async (req, res) => {
         res.status(200).send('Chat deleted successfully!');
     } catch (err) {
         res.status(500).send('Error deleting chat!');
+    }
+});
+
+// ── Investigation Persistence ────────────────────────────────────
+
+app.post('/api/chats/:id/investigations', async (req, res) => {
+    const { task, steps, result, status } = req.body;
+    if (!task) return res.status(400).json({ error: 'task is required' });
+
+    const investigation = { task, steps: steps || [], result: result || null, status: status || 'complete', createdAt: new Date() };
+
+    try {
+        if (mongoConnected) {
+            await Chat.updateOne({ _id: req.params.id }, { $push: { investigations: investigation } });
+            return res.status(201).json({ ok: true });
+        }
+        const chat = memStore.chats.find(c => c._id === req.params.id);
+        if (chat) {
+            if (!chat.investigations) chat.investigations = [];
+            chat.investigations.push(investigation);
+            return res.status(201).json({ ok: true });
+        }
+        res.status(404).json({ error: 'Chat not found' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/chats/:id/investigations', async (req, res) => {
+    try {
+        if (mongoConnected) {
+            const chat = await Chat.findOne({ _id: req.params.id }, { investigations: 1 });
+            return res.json({ investigations: chat?.investigations || [] });
+        }
+        const chat = memStore.chats.find(c => c._id === req.params.id);
+        res.json({ investigations: chat?.investigations || [] });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -447,6 +487,9 @@ const plugins = loadPlugins(fullConfig);
 // Compile context at startup
 const contextCompiler = new ContextCompiler(fullConfig, plugins);
 contextCompiler.compile().catch(err => console.warn('⚠️  Context compilation failed:', err.message));
+
+// Agent routes (investigation orchestrator)
+registerAgentRoutes(app, fullConfig, plugins, gatewayConfig);
 
 // Wiki routes
 app.get("/api/wiki", async (req, res) => {

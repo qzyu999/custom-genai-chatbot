@@ -143,3 +143,131 @@
   background-color: rgba(239, 68, 68, 0.1);
   transform: none;
 }
+
+/* Mode toggle (chat vs investigate) */
+.mode-toggle {
+  display: flex;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.mode-btn {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #666 !important;
+  cursor: pointer;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: all 0.15s !important;
+  padding: 0 !important;
+}
+
+.mode-btn:hover {
+  color: #999 !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  transform: none !important;
+}
+
+/* Mode toggle tooltips — positioned above */
+.mode-btn[data-tooltip]::after {
+  right: auto;
+  left: 50%;
+  top: auto;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  font-size: 11px;
+  padding: 5px 10px;
+  white-space: nowrap;
+  max-width: none;
+  background: #1a1625;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.mode-btn.active {
+  background: rgba(124, 58, 237, 0.2) !important;
+  color: #a78bfa !important;
+}
+
+/* Investigate submit button accent */
+.investigate-submit {
+  background: linear-gradient(135deg, #7c3aed, #2563eb) !important;
+}
+
+.investigate-submit:hover {
+  background: linear-gradient(135deg, #6d28d9, #1d4ed8) !important;
+}
+
+/* Investigation suggestion banner */
+.investigation-suggestion {
+  position: fixed;
+  bottom: 90px;
+  left: calc(260px + ((100% - 260px) / 2));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 12px;
+  max-width: 680px;
+  width: calc(100% - 260px - 80px);
+  z-index: 10;
+  backdrop-filter: blur(8px);
+  animation: slideUp 0.2s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.suggestion-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.suggestion-text {
+  flex: 1;
+  font-size: 13px;
+  color: #cbd5e1;
+}
+
+.suggestion-accept {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #7c3aed;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.suggestion-accept:hover {
+  background: #6d28d9;
+}
+
+.suggestion-dismiss {
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.suggestion-dismiss:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+}

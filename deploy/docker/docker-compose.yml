@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: lighthouse-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  backend:
+    build:
+      context: ../../
+      dockerfile: deploy/docker/Dockerfile.backend
+    container_name: lighthouse-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - MONGO=mongodb://mongo:27017/lighthouse
+      - CLIENT_URL=http://localhost:5173
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      - ../../config.yaml:/app/config.yaml:ro
+      - ../../config.local.yaml:/app/config.local.yaml:ro
+      - ../../secrets:/app/secrets:ro
+      - ../../backend/content:/app/backend/content:ro
+
+  client:
+    build:
+      context: ../../
+      dockerfile: deploy/docker/Dockerfile.client
+    container_name: lighthouse-client
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+
+volumes:
+  mongo-data:

@@ -43,6 +43,16 @@ plugins:
   agent:
     provider: "mock"
 
+# Agent orchestrator settings
+agent:
+  mock_mode: true    # Use mock data for local testing (no LLM calls for planning)
+  max_iterations: 10
+  max_duration_ms: 120000
+  sub_agents:
+    - sql_analyst
+    - data_analyst
+    - researcher
+
 # Context engineering
 context:
   wiki_mode: "full"       # "full" | "summary" | "off"

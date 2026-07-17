@@ -447,3 +447,83 @@
   color: #4ade80;
   font-weight: 500;
 }
+
+/* Markdown tables in bot messages */
+.message.bot table {
+  font-size: 12px;
+  border-collapse: collapse;
+  width: 100%;
+  margin: 10px 0;
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.message.bot th {
+  padding: 8px 12px;
+  text-align: left;
+  background: rgba(124, 58, 237, 0.08);
+  font-weight: 600;
+  color: #cbd5e1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.message.bot td {
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: #94a3b8;
+}
+
+.message.bot tr:hover td {
+  background: rgba(124, 58, 237, 0.04);
+}
+
+/* Investigation indicator on user messages */
+.message.user.investigation-msg {
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(37, 99, 235, 0.05));
+}
+
+.user-investigate-badge {
+  font-size: 12px;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+/* Investigation status banner */
+.investigation-status-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  margin-bottom: 10px;
+  background: rgba(124, 58, 237, 0.06);
+  border: 1px solid rgba(124, 58, 237, 0.12);
+  border-radius: 10px;
+  font-size: 13px;
+  color: #a78bfa;
+  width: fit-content;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.investigation-status-banner.summarizing {
+  background: rgba(34, 197, 94, 0.06);
+  border-color: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.investigation-status-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

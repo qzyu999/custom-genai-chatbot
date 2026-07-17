@@ -29,10 +29,13 @@ const NewPrompt = ({
   chatPageRef,
   chatId,
   onExternalStop,
+  onInvestigate,
 }) => {
   const { currentModel } = useModel();
   const [question, setQuestion] = useState('');
   const [answer, setAnswer] = useState('');
+  const [chatMode, setChatMode] = useState('chat'); // 'chat' | 'investigate'
+  const [suggestion, setSuggestion] = useState(null);
   const queryClient = useQueryClient();
 
   // The active generation ID — only the matching generation can update state
@@ -236,13 +239,62 @@ const NewPrompt = ({
     const text = e.target.text.value;
     if (!text || isTyping) return;
     formRef.current?.reset();
-    generate(text, false);
+
+    if (chatMode === 'investigate') {
+      if (onInvestigate) {
+        onInvestigate(text);
+      }
+    } else {
+      // In chat mode: check if we should suggest investigation first
+      // But don't block — just generate normally and show suggestion if triggered
+      // The suggestion is for the NEXT time (or user can accept to switch)
+      generate(text, false);
+      checkShouldInvestigate(text);
+    }
+  };
+
+  const checkShouldInvestigate = async (text) => {
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || "";
+      const res = await fetch(`${API_URL}/api/agent/should-investigate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ message: text }),
+      });
+      const result = await res.json();
+      if (result.suggested) {
+        setSuggestion({ ...result, taskText: text });
+      }
+    } catch {}
+  };
+
+  const dismissSuggestion = () => setSuggestion(null);
+  const acceptSuggestion = () => {
+    const taskText = suggestion?.taskText || question;
+    setSuggestion(null);
+
+    // Cancel any in-progress generation (partial response not needed)
+    const gen = activeGenRef.current;
+    if (gen) {
+      gen.abort();
+      activeGenRef.current = null;
+      setIsTyping(false);
+      setAnswer('');
+    }
+
+    // Start investigation — handleInvestigate will persist the user message if needed
+    if (onInvestigate && taskText) {
+      onInvestigate(taskText);
+      // Clear local question after refetch settles (prevents duplicate bubble)
+      setTimeout(() => setQuestion(''), 500);
+    }
   };
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      formRef.current?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      formRef.current?.requestSubmit();
     }
   };
 
@@ -252,12 +304,21 @@ const NewPrompt = ({
   const location = useLocation();
   const hasRun = useRef(false);
   useEffect(() => {
-    if (!hasRun.current && location.state?.autoGenerate) {
+    if (!hasRun.current) {
       const history = data?.history || [];
       if (history.length === 1 && history[0].role === 'user') {
-        hasRun.current = true;
-        window.history.replaceState({}, '');
-        generate(data.history[0].parts[0].text, true);
+        if (location.state?.autoInvestigate) {
+          hasRun.current = true;
+          window.history.replaceState({}, '');
+          setChatMode('investigate');
+          // Strip the 🔬 prefix when passing to onInvestigate (it's already in DB)
+          const taskText = data.history[0].parts[0].text.replace(/^🔬\s*/, '');
+          if (onInvestigate) onInvestigate(taskText);
+        } else if (location.state?.autoGenerate) {
+          hasRun.current = true;
+          window.history.replaceState({}, '');
+          generate(data.history[0].parts[0].text, true);
+        }
       }
     }
     hasRun.current = true;
@@ -312,11 +373,42 @@ const NewPrompt = ({
         </div>
       )}
       <div ref={endRef}></div>
+      {suggestion && (
+        <div className="investigation-suggestion">
+          <span className="suggestion-icon">🔬</span>
+          <span className="suggestion-text">{suggestion.reason}</span>
+          <button className="suggestion-accept" onClick={acceptSuggestion}>Investigate</button>
+          <button className="suggestion-dismiss" onClick={dismissSuggestion}>Dismiss</button>
+        </div>
+      )}
       <form className="newForm" onSubmit={handleSubmit} ref={formRef}>
+        <div className="mode-toggle">
+          <button
+            type="button"
+            className={`mode-btn ${chatMode === 'chat' ? 'active' : ''}`}
+            onClick={() => setChatMode('chat')}
+            data-tooltip="Chat — quick Q&A"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+            </svg>
+          </button>
+          <button
+            type="button"
+            className={`mode-btn ${chatMode === 'investigate' ? 'active' : ''}`}
+            onClick={() => setChatMode('investigate')}
+            data-tooltip="Investigate — multi-step analysis with sub-agents"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              <path d="M8 11h6"/><path d="M11 8v6"/>
+            </svg>
+          </button>
+        </div>
         <input id="file" type="file" multiple={false} hidden />
         <textarea
           name="text"
-          placeholder="Ask something..."
+          placeholder={chatMode === 'investigate' ? "Describe what you'd like to investigate..." : "Ask something..."}
           onKeyDown={handleKeyDown}
           ref={textareaRef}
           disabled={isTyping}
@@ -328,8 +420,14 @@ const NewPrompt = ({
             </svg>
           </button>
         ) : (
-          <button type="submit">
-            <img src="/arrow.png" alt="Send" />
+          <button type="submit" className={chatMode === 'investigate' ? 'investigate-submit' : ''}>
+            {chatMode === 'investigate' ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            ) : (
+              <img src="/arrow.png" alt="Send" />
+            )}
           </button>
         )}
       </form>

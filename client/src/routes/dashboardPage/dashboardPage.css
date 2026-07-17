@@ -197,3 +197,62 @@
   gap: 10px;
   justify-content: center;
 }
+
+/* Mode toggle in dashboard form */
+.dashboard-mode-toggle {
+  display: flex;
+  gap: 2px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.dashboard-mode-toggle .mode-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  padding: 0;
+}
+
+.dashboard-mode-toggle .mode-btn:hover {
+  color: #999;
+  background: rgba(255, 255, 255, 0.05);
+  transform: none;
+}
+
+/* Dashboard mode toggle tooltips — positioned above */
+.dashboard-mode-toggle .mode-btn[data-tooltip]::after {
+  right: auto;
+  left: 50%;
+  top: auto;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  font-size: 11px;
+  padding: 5px 10px;
+  white-space: nowrap;
+  max-width: none;
+  background: #1a1625;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.dashboard-mode-toggle .mode-btn.active {
+  background: rgba(124, 58, 237, 0.2);
+  color: #a78bfa;
+}
+
+.dashboard-form button.investigate-submit {
+  background: linear-gradient(135deg, #7c3aed, #2563eb);
+}
+
+.dashboard-form button.investigate-submit:hover {
+  background: linear-gradient(135deg, #6d28d9, #1d4ed8);
+}

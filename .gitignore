@@ -9,6 +9,7 @@ secrets/*.txt
 config.local.yaml
 backend/content/catalog.local.yaml
 backend/content/*.local.yaml
+backend/content/*.local.json
 
 # Environment files
 backend/.env
