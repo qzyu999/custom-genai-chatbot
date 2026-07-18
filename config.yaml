@@ -36,10 +36,10 @@ plugins:
   wiki:
     provider: "filesystem"
     path: "./content"
-    html_path: ""
-    git_repo: "https://github.com/qzyu999/Lighthouse-Wiki.git"  # Auto-pulls wiki content on startup
+    html_path: ".wiki-repo"
+    git_repo: "https://github.com/qzyu999/Lighthouse-Wiki.git"
     git_branch: "main"
-    git_content_path: "content"  # Subdirectory within the repo containing YAML pages
+    git_content_path: "content"
   query:
     provider: "static"
     catalog_file: "./content/catalog.yaml"
