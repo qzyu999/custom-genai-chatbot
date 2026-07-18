@@ -2,8 +2,8 @@
  * Agent Plugin Interface
  *
  * For complex multi-step tasks that exceed a single LLM call.
- * Delegates work to an external agent system (e.g., ContainerClaw)
- * that can run tools, query data, read docs, and consolidate results.
+ * Delegates work to an external agent system that can run tools,
+ * query data, read docs, and consolidate results.
  *
  * Any agent provider must implement:
  *   - isAvailable()       → boolean

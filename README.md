@@ -65,8 +65,6 @@ Open http://localhost:5173
 
 ## Config Pattern
 
-Follows the same pattern as [ContainerClaw](https://github.com/qzyu999/ContainerClaw):
-
 - `config.yaml` — committed, defines provider shape (no secrets)
 - `config.local.yaml` — gitignored, deep-merged on top for private endpoints
 - `secrets/` — gitignored API key files, resolved at runtime

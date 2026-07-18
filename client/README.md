@@ -1,3 +1,12 @@
-# Lama Dev AI Chat Bot App Starter Setup
+# Lighthouse Client
 
-This template provides a minimal setup to get React 19 working in Vite with HMR and some ESLint rules.
+React (Vite) frontend for Lighthouse. Provides chat UI, model picker, wiki viewer, and search.
+
+## Development
+
+```bash
+npm install
+npm run dev
+```
+
+Opens at http://localhost:5173. Proxies `/api` requests to the backend on port 3000.
